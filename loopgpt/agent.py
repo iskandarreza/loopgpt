@@ -23,7 +23,11 @@ import json
 import time
 import ast
 
-
+from loader.post_data import post_data
+def log(data=None, param="logger"):
+    if data is not None:
+        post_data(data, agent_name=param, url="http://localhost:5050/api/null/")
+        
 class Agent:
     def __init__(
         self,
@@ -149,6 +153,8 @@ class Agent:
                 " You can do `agent.clear_state()` to start over with the same goals."
             )
         message = self.get_full_message(message)
+        log("==============================", f"---------{self.name}----------")
+        log({"message": message}, self.name)
         if self.staging_tool:
             tool = self.staging_tool
             if run_tool:
@@ -183,6 +189,7 @@ class Agent:
             self.staging_response = None
         full_prompt, token_count = self.get_full_prompt(message)
         token_limit = self.model.get_token_limit()
+        log({"token_limit": token_count}, self.name)
         max_tokens = min(1000, max(token_limit - token_count, 0))
         assert max_tokens
         resp = self.model.chat(
@@ -192,6 +199,7 @@ class Agent:
         )
         try:
             resp = self._load_json(resp)
+            log({"plan", plan}, self.name)
             plan = resp.get("plan")
             if plan and isinstance(plan, list):
                 if (
@@ -236,12 +244,15 @@ class Agent:
                 "content": json.dumps(resp) if isinstance(resp, dict) else resp,
             }
         )
+        
+        post_data(self.config(include_state=True), self.name)
         return resp
 
     def _extract_json_with_gpt(self, s):
         func = "def convert_to_json(response: str) -> str:"
         desc = f"""Convert the given string to a JSON string of the form \n{json.dumps(DEFAULT_RESPONSE_FORMAT_, indent=4)}\nEnsure the result can be parsed by Python json.loads."""
         res = ai_function(func, desc, [s])
+        log({"jsonconv":  [{"str": [s]}, {"res": res}]}, self.name)
         return res
 
     def _load_json(self, s, try_gpt=True):
@@ -317,7 +328,7 @@ class Agent:
                     found = True
                     break
             if not found:
-                resp = f'Command "{tool_id}" does not exist.'
+                resp = f'Command "{tool_id}" does not exist or is unavailable to {self.name}. Available {self.tools_prompt()}'
                 self.history.append({"role": "system", "content": resp})
                 return resp
             try:

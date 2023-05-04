@@ -1,6 +1,14 @@
 from loopgpt.tools.base_tool import BaseTool
+from loader.tool_setup import (
+    agent_tools, 
+    file_read_tools, 
+    file_write_tools,
+    add_tools
+) 
 from typing import *
 from uuid import uuid4
+
+import json
 
 
 class _AgentManagerTool(BaseTool):
@@ -11,7 +19,7 @@ class CreateAgent(_AgentManagerTool):
     @property
     def args(self):
         return {
-            "name": "Agent name",
+            "name": "Agent name format: '4-digits-adjective-verb'",
             "task": "Specific task for agent",
             "prompt": "The prompt",
         }
@@ -29,7 +37,13 @@ class CreateAgent(_AgentManagerTool):
         agent = Agent(
             name=name, description=f"An agent for performing this specific task: {task}"
         )
-        agent.tools.clear()
+        
+        tools_list = agent_tools + file_read_tools + file_write_tools        
+        tools = agent.tools
+        tool_set = add_tools(tool_set=tools, tools_list=tools_list)
+        
+        agent.tools = tool_set
+
         id = uuid4().hex[:8]
         self.agent.sub_agents[id] = (Agent(), task)
         resp = agent.chat(prompt)
@@ -50,7 +64,8 @@ class MessageAgent(_AgentManagerTool):
 
     def run(self, id, message):
         if id not in self.agent.sub_agents:
-            return {"resp": "AGENT NOT FOUND!"}
+            agent_list = [[k, v[1]] for k, v in self.agent.sub_agents.items()]
+            return {"resp": f"AGENT NOT FOUND! Agent List: {json.dumps(agent_list)}"}
         resp = self.agent.sub_agents[id][0].chat(message)
         return {"resp": resp}
 
