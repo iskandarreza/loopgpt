@@ -1,4 +1,4 @@
-from loopgpt import BaseWrapper
+from loopgpt import AgentWrapper
 
 class ToolConfig:
     # Tool set grouped by utility
@@ -50,24 +50,16 @@ class ToolConfig:
             tools[tool] = _tool
         return tools
 
-class ToolConfigWrapper(BaseWrapper):
-    def __init__(self) -> None:
-          super().__init__(main_task="Test agent capabilities")
-          new_agent_id = self.create_agent('Test Agent')
-          new_agent = self.get_agent[new_agent_id]
-          tool_set = new_agent.tools
-          tool_config = ToolConfig()
-          # we limit the tools to just the following
-          tool_kit = tool_config.web_tools + tool_config.agent_tools + tool_config.ask_user
-          new_agent.tools = tool_config.add_tools(tool_set=tool_set, tool_kit=tool_kit)
+tool_config = ToolConfig()
+tool_kit = tool_config.web_tools + tool_config.agent_tools + tool_config.ask_user
 
+wrapper = AgentWrapper()
 
+tool_config_agent = wrapper.create_agent("Tool Testing Agent")
+tool_set = tool_config_agent.tools 
+tool_config_agent.tools = tool_config.add_tools(tool_set=tool_set, tool_kit=tool_kit)
 
+print(tool_config_agent.tools)
 
-
-wrapper = ToolConfigWrapper()
-agents = wrapper.agents
-agent_id = list(agents.keys())[0]
-test_agent = wrapper.get_agent[agent_id]
-print(test_agent.tools)
-test_agent.tools_prompt()
+# exec(open('examples/tool_config_wrapper.py').read()) 
+# tool_config_agent.tools_prompt()

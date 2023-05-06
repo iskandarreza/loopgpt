@@ -1,4 +1,4 @@
-from loopgpt import BaseWrapper
+from loopgpt import AgentWrapper, AgentRegistry
 from loopgpt.tools.agent_manager import MessageAgent, ListAgents
 
 class _MessageAgent(MessageAgent):
@@ -24,33 +24,49 @@ class _ListAgents(ListAgents):
     def run(self):
         return f'"agents": "{self._wrapper._agents_roster}"'
 
-class MultiAgentWrapper(BaseWrapper):
-    def __init__(self, main_task) -> None:
-          super().__init__(main_task)
-          main_agent_id = self.create_agent("Main Agent")
-          main_agent = super().get_agent(main_agent_id)
-          main_agent.description = f"An AI agent that will work with other AI agents to achieve consensus and complete the main task of {main_task}"
+class MultiAgentTaskRegistry(AgentRegistry):
+    def __init__(self, registry_name) -> None:
+          super().__init__(registry_name)
+          self._agents_roster = {}
 
-          supporting_agent_id = self.create_agent("Supporting Agent")
-          supporting_agent = super().get_agent(supporting_agent_id)
-          supporting_agent.description = f"{supporting_agent.name}, an AI agent created specificially to help {main_agent.name} complete their main task which is {main_task}."
+    @property
+    def agents_roster(self):
+        return self._agents_roster
+    
+    def register_agent(self, agent, main_task):
+        agent_id = super().register_agent(agent)
+        self._agents_roster[agent_id] = [{"name": agent.name}, {"task": [{main_task}]}]
+    
+def setup_agent_registry(main_task: str):
+    agentWrapper = AgentWrapper()
+    registry = MultiAgentTaskRegistry("Multi Agent Registry")
 
-          main_agent.tools["list_agents"] = _ListAgents(self)
-          supporting_agent.tools["list_agents"] = _ListAgents(self)
-          main_agent.tools["message_agent"] = _MessageAgent(self)
-          supporting_agent.tools["message_agent"] = _MessageAgent(self)
+    main_agent = agentWrapper.create_agent("Main Agent")
+    main_agent.description = f"An AI agent that will work with other AI agents to achieve consensus and complete the main task of {main_task}"
+    main_agent.tools["list_agents"] = _ListAgents(registry)
+    main_agent.tools["message_agent"] = _MessageAgent(registry)
+    registry.register_agent(main_agent, main_agent.description)
 
+    supporting_agent = agentWrapper.create_agent("Supporting Agent")
+    supporting_agent.description = f"{supporting_agent.name}, an AI agent created specificially to help {main_agent.name} complete their main task which is {main_task}."
+    supporting_agent.tools["list_agents"] = _ListAgents(registry)
+    supporting_agent.tools["message_agent"] = _MessageAgent(registry)
+    registry.register_agent(supporting_agent, supporting_agent.description)
+
+    return registry
 
 main_task = "listing available agents and the commands they can use to file "
-wrapper = MultiAgentWrapper(main_task)
-agents = wrapper.agents
-main_id = list(agents.keys())[0]
-support_id = list(agents.keys())[1]
-print({main_id, support_id})
-print(agents)
+registry = setup_agent_registry(main_task)
 
-main_agent = wrapper.get_agent(main_id)
-support_agent = wrapper.get_agent(support_id)
+print(f""" 
 
-print(main_agent.tools)
-print(support_agent.tools)
+--- List of agents ---
+{registry.agents}""")
+
+
+print(f""" 
+
+--- Agent duty roster ---
+{registry._agents_roster}""")
+
+# exec(open("examples/multi_agent_wrapper.py").read())
