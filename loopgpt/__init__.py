@@ -12,6 +12,7 @@ from loopgpt.memory import from_config as memory_from_config
 from loopgpt.embeddings import from_config as embedding_provider_from_config
 
 from loopgpt.utils.openai_key import check_openai_key
+from loopgpt.wrapper import *
 from dotenv import load_dotenv
 
 import sys
