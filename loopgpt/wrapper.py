@@ -7,10 +7,6 @@ class AgentWrapper:
     def __init__(self) -> None:
         pass
 
-    @property
-    def agents_roster(self):
-        return self._agents_roster
-
     def create_agent(self, agent_name: str):
         """
         This function creates a new agent object with a unique ID and a given name.
@@ -33,9 +29,9 @@ class AgentWrapper:
         @param assignee - The assignee parameter is an object that has a dictionary attribute called
         "sub_agents". This method is adding a new sub_agent to the assignee's sub_agents dictionary.
         """
-        assignee.sub_agents[sub_agent.id] = [
+        assignee.sub_agents[f"{sub_agent.id}"] = [
             sub_agent,
-            sub_agent
+            sub_agent.description
         ]
 
 # The AgentRegistry class allows for registering and retrieving agents with unique IDs and
